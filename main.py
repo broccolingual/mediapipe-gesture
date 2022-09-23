@@ -4,6 +4,28 @@ import cv2
 import mediapipe as mp
 
 
+def mosaic(src, ratio=0.05):
+    small = cv2.resize(src, None, fx=ratio, fy=ratio,
+                       interpolation=cv2.INTER_NEAREST)
+    return cv2.resize(small, src.shape[:2][::-1], interpolation=cv2.INTER_NEAREST)
+
+
+def mosaicArea(src, x, y, width, height, ratio=0.05):
+    h, w, _ = src.shape
+    if x < 0:
+        x = 0
+    if x > w - width - 1:
+        x = w - width - 1
+    if y < 0:
+        y = 0
+    if y > h - height - 1:
+        y = h - height - 1
+    dst = src.copy()
+    dst[y:y + height, x:x +
+        width] = mosaic(dst[y:y + height, x:x + width], ratio)
+    return dst
+
+
 def getDegree(x1, y1, x2, y2) -> float:
     radian = math.atan2(y2-y1, x2-x1)
     return radian * 180 / math.pi
@@ -13,6 +35,10 @@ if __name__ == "__main__":
     mp_drawing = mp.solutions.drawing_utils
     mp_pose = mp.solutions.pose
     cap = cv2.VideoCapture(0)
+
+    cv2.namedWindow("Pose", cv2.WINDOW_NORMAL)
+    cv2.setWindowProperty("Pose", cv2.WND_PROP_FULLSCREEN,
+                          cv2.WINDOW_FULLSCREEN)
 
     past_landmarks_num = 60  # past frame num
     past_landmarks = [] * past_landmarks_num  # 0:latest
@@ -65,11 +91,15 @@ if __name__ == "__main__":
                 elif i == 16:  # right wrist
                     pass
 
+            # mosaic
+            frame = mosaicArea(
+                frame, int(landmarks[0].x * w-128), int(landmarks[0].y * h - 128), 256, 256)
+
             # nose
             cv2.putText(
                 frame,
-                f"nose x: {round(landmark.x, 2)} y: {round(landmark.y, 2)} z: {round(landmark.z, 2)}",
-                (12, 24), cv2.FONT_ITALIC, 0.5, (255, 255, 255))
+                f"Nose pos x: {round(landmarks[0].x, 2)} y: {round(landmarks[0].y, 2)} z: {round(landmarks[0].z, 2)}",
+                (12, 20), cv2.FONT_ITALIC, 0.7, (255, 255, 255), 2)
 
             # body degree
             ls = landmarks[11]  # left shoulder
@@ -78,8 +108,8 @@ if __name__ == "__main__":
             deg = getDegree(rs.x, rs.y, ls.x, ls.y)
             cv2.putText(
                 frame,
-                f"deg {round(deg, 1)} deg",
-                (12, 42), cv2.FONT_ITALIC, 0.5, (255, 255, 255))
+                f"Body deg {round(deg, 1)} deg",
+                (12, 48), cv2.FONT_ITALIC, 0.7, (255, 255, 255), 2)
 
             if abs(deg) <= 20:
                 cv2.putText(
@@ -110,13 +140,13 @@ if __name__ == "__main__":
 
             cv2.putText(
                 frame,
-                f"Right Cos {round(r_cos, 2)}",
-                (12, 60), cv2.FONT_ITALIC, 0.5, (255, 255, 255))
+                f"Right Arm Cos {round(r_cos, 2)}",
+                (12, 72), cv2.FONT_ITALIC, 0.7, (255, 255, 255), 2)
 
             cv2.putText(
                 frame,
-                f"Left  Cos {round(l_cos, 2)}",
-                (12, 78), cv2.FONT_ITALIC, 0.5, (255, 255, 255))
+                f"Left Arm Cos  {round(l_cos, 2)}",
+                (12, 96), cv2.FONT_ITALIC, 0.7, (255, 255, 255), 2)
 
             if -0.85 < l_cos < 0.85:
                 cv2.putText(
@@ -138,11 +168,12 @@ if __name__ == "__main__":
                     "Straight",
                     (12, int(h/2) + 24), cv2.FONT_ITALIC, 0.6, (0, 0, 255), 2)
 
-            # landmarks
-            # mp_drawing.draw_landmarks(
-            #     frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
-            #     connection_drawing_spec=mp_drawing.DrawingSpec(
-            #         thickness=3, circle_radius=20))
+            landmarks
+            mp_drawing.draw_landmarks(
+                frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
+                connection_drawing_spec=mp_drawing.DrawingSpec(
+                    thickness=3, circle_radius=20))
+
             cv2.imshow("Pose", frame)
 
             if cv2.waitKey(5) & 0xFF == 27:
