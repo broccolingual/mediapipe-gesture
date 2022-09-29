@@ -43,8 +43,6 @@ def getDegree(x1, y1, x2, y2) -> float:
 
 
 if __name__ == "__main__":
-    mp_drawing = mp.solutions.drawing_utils
-    mp_pose = mp.solutions.pose
     cap = cv2.VideoCapture(0)
 
     cv2.namedWindow("Pose", cv2.WINDOW_NORMAL)
@@ -52,17 +50,20 @@ if __name__ == "__main__":
                           cv2.WINDOW_FULLSCREEN)
 
     blDebug = False
+
     past_landmarks_num = 10  # past frame num
     past_landmarks = [] * past_landmarks_num  # 0:latest
     past_poses = [] * past_landmarks_num  # 0:latest
+
     pose_list = ["bl", "br", "ls", "rs"]
     pose_sheet = random.choices(pose_list, k=20)
     pose_sheet_index = 0
     pose_phase = False
+
     frame_cnt = 0
     score = 0
 
-    with mp_pose.Pose(
+    with mp.solutions.pose.Pose(
             min_detection_confidence=0.6,
             min_tracking_confidence=0.5) as pose:
         while cap.isOpened():
@@ -90,9 +91,10 @@ if __name__ == "__main__":
             nose = landmarks[0]
 
             if nose.visibility > 0.5:
-                # mosaic
-                frame = mosaicArea(
-                    frame, int(nose.x * w-128), int(nose.y * h - 128), 256, 256)
+                if blDebug:
+                    # mosaic
+                    frame = mosaicArea(
+                        frame, int(nose.x * w-128), int(nose.y * h - 128), 256, 256)
 
                 # nose
                 cv2.putText(
@@ -227,9 +229,9 @@ if __name__ == "__main__":
                 del past_poses[-1]
 
             if blDebug:
-                mp_drawing.draw_landmarks(
-                    frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
-                    connection_drawing_spec=mp_drawing.DrawingSpec(
+                mp.solutions.drawing_utils.draw_landmarks(
+                    frame, results.pose_landmarks, mp.solutions.pose.POSE_CONNECTIONS,
+                    connection_drawing_spec=mp.solutions.drawing_utils.DrawingSpec(
                         thickness=3, circle_radius=20))
 
             cv2.imshow("Pose", frame)
