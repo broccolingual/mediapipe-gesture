@@ -150,7 +150,7 @@ if __name__ == "__main__":
                     f"Right Arm Cos {round(r_cos, 2)}",
                     (12, 72), cv2.FONT_ITALIC, 0.7, (255, 255, 255), 2)
 
-                if -0.85 < l_cos < 0.85:
+                if -0.86 < l_cos < 0.86:
                     if blDebug:
                         cv2.putText(
                             frame,
@@ -168,7 +168,7 @@ if __name__ == "__main__":
                     f"Left Arm Cos  {round(l_cos, 2)}",
                     (12, 96), cv2.FONT_ITALIC, 0.7, (255, 255, 255), 2)
 
-                if -0.85 < r_cos < 0.85:
+                if -0.86 < r_cos < 0.86:
                     if blDebug:
                         cv2.putText(
                             frame,
@@ -219,7 +219,7 @@ if __name__ == "__main__":
             cv2.putText(
                 frame,
                 f"Score: {score}",
-                (int(w/2) - 48, int(h) - 72), cv2.FONT_ITALIC, 0.8, (0, 0, 255), 2)
+                (int(w/2) - 48, int(h) - 72), cv2.FONT_ITALIC, 0.8, (0, 0, 255), 4)
 
             if len(past_landmarks) >= past_landmarks_num:
                 del past_landmarks[-1]
