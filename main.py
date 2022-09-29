@@ -1,7 +1,18 @@
 import math
+import os
+import random
+import subprocess
 
 import cv2
 import mediapipe as mp
+
+
+def playSound(path):
+    if os.name != 'nt':
+        subprocess.Popen(["aplay", "--quiet", path])
+    else:
+        subprocess.Popen(
+            ["powershell", "-c", f"(New-Object Media.SoundPlayer '{path}').PlaySync();"])
 
 
 def mosaic(src, ratio=0.05):
@@ -41,9 +52,15 @@ if __name__ == "__main__":
                           cv2.WINDOW_FULLSCREEN)
 
     blDebug = False
-    past_landmarks_num = 15  # past frame num
+    past_landmarks_num = 10  # past frame num
     past_landmarks = [] * past_landmarks_num  # 0:latest
     past_poses = [] * past_landmarks_num  # 0:latest
+    pose_list = ["bl", "br", "ls", "rs"]
+    pose_sheet = random.choices(pose_list, k=20)
+    pose_sheet_index = 0
+    pose_phase = False
+    frame_cnt = 0
+    score = 0
 
     with mp_pose.Pose(
             min_detection_confidence=0.6,
@@ -62,6 +79,7 @@ if __name__ == "__main__":
                 continue
             landmarks = results.pose_landmarks.landmark
             past_landmarks.insert(0, landmarks)
+            frame_cnt += 1
 
             frame.flags.writeable = True
             frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
@@ -99,21 +117,21 @@ if __name__ == "__main__":
                             frame,
                             "Center",
                             (int(w/2) - 64, int(h/2) + 36), cv2.FONT_ITALIC, 1, (0, 255, 0), 4)
-                    poseTmp = "Body center"
+                    poseTmp = "bc"
                 elif deg < -20:
                     if blDebug:
                         cv2.putText(
                             frame,
                             "Left",
                             (12, int(h/2) + 36), cv2.FONT_ITALIC, 1, (0, 255, 0), 4)
-                    poseTmp = "Body left"
+                    poseTmp = "bl"
                 elif deg > 20:
                     if blDebug:
                         cv2.putText(
                             frame,
                             "Right",
                             (int(w) - 128, int(h/2) + 36), cv2.FONT_ITALIC, 1, (0, 255, 0), 4)
-                    poseTmp = "Body right"
+                    poseTmp = "br"
 
             # arms
             l0 = landmarks[13]
@@ -142,7 +160,7 @@ if __name__ == "__main__":
                             frame,
                             "Straight",
                             (int(w) - 96, int(h/2) + 24), cv2.FONT_ITALIC, 0.6, (0, 0, 255), 2)
-                    poseTmp = "Right straight"
+                    poseTmp = "rs"
 
             if l0.visibility > 0.5 and lw.visibility > 0.5:
                 cv2.putText(
@@ -160,7 +178,7 @@ if __name__ == "__main__":
                             frame,
                             "Straight",
                             (12, int(h/2) + 24), cv2.FONT_ITALIC, 0.6, (0, 0, 255), 2)
-                    poseTmp = "Left straight"
+                    poseTmp = "ls"
 
             past_poses.insert(0, poseTmp)
             if len(past_poses) >= past_landmarks_num:
@@ -182,6 +200,26 @@ if __name__ == "__main__":
                     frame,
                     f"[{poseMax}] ({cntMax}/{past_landmarks_num} frames)",
                     (int(w/2) - 128, int(h) - 36), cv2.FONT_ITALIC, 0.6, (255, 0, 0), 2)
+
+                if frame_cnt % 50 == 0 and pose_sheet_index < len(pose_sheet):
+                    if pose_phase is False:
+                        ps = pose_sheet[pose_sheet_index]
+                        pose_phase = True
+                        playSound(f"sound/{ps}.wav")
+                    else:
+                        ps = pose_sheet[pose_sheet_index]
+                        pose_sheet_index += 1
+                        pose_phase = False
+                        if ps == poseMax:
+                            playSound("sound/correct.wav")
+                            score += 100
+                        else:
+                            playSound("sound/wrong.wav")
+
+            cv2.putText(
+                frame,
+                f"Score: {score}",
+                (int(w/2) - 48, int(h) - 72), cv2.FONT_ITALIC, 0.8, (0, 0, 255), 2)
 
             if len(past_landmarks) >= past_landmarks_num:
                 del past_landmarks[-1]
